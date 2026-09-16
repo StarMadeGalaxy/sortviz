@@ -1,15 +1,16 @@
+from typing import Self
+import random
+
 import pygame
 
-import random
 
 
 NUMBER_COUNT: int = 70      # The amount of numbers in the list to be sorted
 NUMBER_MAX: int = 100
 NUMBER_MIN: int = 1
-SAMPLE_RATE: int = 44100    # Samples describing each second of audio
-TONE_FREQUENCY = 440   # Wave repetitions per second: pitch in Hz
 FPS: int = 60
-TILES_PER_SECOND: int = 1   # Controls how many tiles are going to be drawn per second
+TILES_PER_SECOND: int = 5   # Controls how many tiles are going to be drawn per second
+
 
 class Tile:
     max_value: int = 0
@@ -18,17 +19,24 @@ class Tile:
     width: float = 0      # all of the tiles are the same width
     num_of_tiles_shown: int = 0     # shows how many tiles are shown
 
-    def __init__(self, value: int, color: pygame.Color):
+    def __init__(self, index: int, value: int, color: pygame.Color | None = None):
+        self.index = index
         self.value = value
-        self.color = color
+        self.color = Tile.random_color() if color is None else color
         self.height = int(Tile.screen_height * value / Tile.max_value)
-        self.sound_frequency = TONE_FREQUENCY * self.value / Tile.max_value
 
-    def draw(self, screen: pygame.Surface, index: int) -> None:
-        x = index * Tile.width
+    def draw(self, screen: pygame.Surface) -> None:
+        x = self.index * Tile.width
         y = Tile.screen_height - self.height
         rect_value = pygame.Rect(x, y, Tile.width, self.height)
         pygame.draw.rect(screen, self.color, rect_value)
+
+    def swap(self, swap_with: Self) -> None:
+        self.color, swap_with.color = swap_with.color, self.color
+        self.index, swap_with.index = swap_with.index, self.index
+        self.value, swap_with.value = swap_with.value, self.value
+        self.height, swap_with.height = swap_with.height, self.height
+        pass
 
     @classmethod
     def init(cls, screen: pygame.Surface, nums: list, debug: bool=False) -> None:
@@ -50,71 +58,37 @@ class Tile:
             random.randint(0, 255)
         )
 
-# don't understand the code its CODEX CODE
-def test_sound(frequency: float, duration_sec: float) -> None:
-    import numpy as np
 
-    DURATION = 0.1         # Seconds
-    VOLUME = 0.15          # Fraction of maximum amplitude
-
-      # 1. Give every sample a time position, measured in seconds.
-    sample_count = int(SAMPLE_RATE * DURATION)
-    times = np.arange(sample_count) / SAMPLE_RATE
-
-    # 2. Calculate a sine wave at those times.
-    # One complete wave cycle corresponds to 2*pi radians.
-    wave = np.sin(2 * np.pi * frequency * times)
-
-    # 3. Fade the beginning and end to avoid abrupt clicks.
-    fade_count = int(SAMPLE_RATE * 0.01)  # 10 milliseconds
-    wave[:fade_count] *= np.linspace(0, 1, fade_count)
-    wave[-fade_count:] *= np.linspace(1, 0, fade_count)
-
-    # 4. Convert amplitudes from approximately -1...1
-    # into the integer format expected by the mixer.
-    samples = (wave * VOLUME * 32767).astype(np.int16)
-
-    # 5. Turn the samples into a sound and play it.
-    sound = pygame.sndarray.make_sound(samples)
-    sound.play()
-
-    # Keep this standalone example alive until playback finishes.
-    pygame.time.wait(int(sound.get_length() * 1000) + 100)
 
 def main() -> None:
-    # One audio channel (mono), using signed 16-bit samples.
-    pygame.mixer.init(
-        frequency=SAMPLE_RATE,
-        size=-16,
-        channels=1,
-    )
-
     pygame.init()
     screen = pygame.display.set_mode((1280, 720))
     running = True
     clock = pygame.time.Clock()
     nums_to_sort = [random.randint(NUMBER_MIN, NUMBER_MAX) for _ in range(NUMBER_COUNT)]
     Tile.init(screen, nums_to_sort, debug=True)
-    tiles: list[Tile] = [Tile(num, Tile.random_color()) for num in nums_to_sort]
+    tiles: list[Tile] = [Tile(index, num) for index, num in enumerate(nums_to_sort)]
+
+    elapsed_since_reveal_ms: float = 0.0
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-                raise SystemExit
 
-        screen.fill("black")
-        for index, tile in enumerate(tiles):
+        time_for_tile: float = 1000 / TILES_PER_SECOND
+        while elapsed_since_reveal_ms >= time_for_tile:
             if Tile.num_of_tiles_shown == NUMBER_COUNT:
+                screen.fill("black")
                 Tile.num_of_tiles_shown = 0
-            tile.draw(screen, index)
+
+            tiles[Tile.num_of_tiles_shown].draw(screen)
             Tile.num_of_tiles_shown += 1
-            print(Tile.num_of_tiles_shown)
-            #test_sound(tile.sound_frequency, duration_sec=0.01)
+
+            elapsed_since_reveal_ms -= time_for_tile
 
         pygame.display.flip()
-        what = clock.tick(FPS)
-        print(what)
+        frame_time = clock.tick(FPS)
+        elapsed_since_reveal_ms += frame_time
 
-    pygame.mixer.quit()
     pygame.quit()
