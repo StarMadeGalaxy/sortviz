@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Self
-from collections.abc import Generator, Iterator
+from collections.abc import Iterator
 import random
 
 import pygame
@@ -8,8 +8,12 @@ import pygame
 from .config import Config
 
 
-def bubble_sort(nums: list[int]) -> Generator[tuple[int, int]]:
-    yield (1, 2)
+def bubble_sort(nums: list[int]) -> Iterator[tuple[int, int]]:
+    for i in range(len(nums) - 1):
+        for j in range(len(nums) - 1 - i):
+            if nums[j] > nums[j+1]:
+                nums[j+1], nums[j] = nums[j], nums[j+1]
+                yield (j,j+1)
 
 
 class Visualizer:
@@ -21,7 +25,7 @@ class Visualizer:
     def run(self, nums_to_sort: list[int]) -> None:
         screen_width, screen_height = self._screen.get_size()
         tiles: Tiles = Tiles(values=nums_to_sort, screen_width=screen_width, screen_height=screen_height)
-
+        algo_step = bubble_sort(nums_to_sort) #TODO(venci): skip the cycle when swap is not needed
         elapsed_since_reveal_ms: float = 0.0
         while True:
             running = True
@@ -34,7 +38,8 @@ class Visualizer:
 
             while elapsed_since_reveal_ms >= self._config.update_time_ms:
                 self._screen.fill("black")
-                tiles.swap(0, -1)
+                to_swap: tuple[int, int] = next(algo_step)
+                tiles.swap(to_swap[0], to_swap[1])
                 for idx, tile in enumerate(tiles):
                     tile.draw(self._screen, tile.width * idx)
                 elapsed_since_reveal_ms -= self._config.update_time_ms
@@ -97,8 +102,10 @@ class Tiles:
 
 
 def main() -> None:
-    config = Config()
+    config = Config(
+        updates_per_second=50,
+        number_count=130
+    )
     nums_to_sort = [random.randint(config.number_min, config.number_max) for _ in range(config.number_count)]
-
     with Visualizer(config) as vis:
         vis.run(nums_to_sort)
