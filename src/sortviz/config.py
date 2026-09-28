@@ -4,6 +4,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True, kw_only=True)
 class Config:
     fps: int = 60
+    sorting_algorithm: str = "bubble_sort"
 
     # Controls how many screen updates are going to happen per second
     updates_per_second: int = 10

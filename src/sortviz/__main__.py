@@ -1,7 +1,8 @@
-from dataclasses import dataclass
-from typing import Self
-from collections.abc import Iterator
 import random
+from collections.abc import Iterator
+from dataclasses import dataclass
+from sys import getsizeof
+from typing import Self
 
 import pygame
 
@@ -41,6 +42,7 @@ class Visualizer:
                 to_swap: tuple[int, int] = next(algo_step)
                 tiles.swap(to_swap[0], to_swap[1])
                 for idx, tile in enumerate(tiles):
+                    print(getsizeof(tile), tile.__slots__)
                     tile.draw(self._screen, tile.width * idx)
                 elapsed_since_reveal_ms -= self._config.update_time_ms
 
@@ -48,6 +50,7 @@ class Visualizer:
             frame_time = self._clock.tick(self._config.fps)
             elapsed_since_reveal_ms += frame_time
 
+    def _play_sort_verification(self):...
 
     def __enter__(self) -> Self:
         pygame.init()
@@ -57,7 +60,7 @@ class Visualizer:
        pygame.quit()
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True)
 class Tile:
     value: int
     color: pygame.Color
@@ -93,6 +96,10 @@ class Tiles:
     def swap(self, first: int, second: int) -> None:
         self._tiles[first], self._tiles[second] = self._tiles[second], self._tiles[first]
 
+    def highlight(self, first: int, second: int):
+        ...
+
+
     def _color_for_value(self, value, max_value) -> pygame.Color:
         red = random.randint(0, 255)
         green = int(255 * value / max_value)
@@ -103,7 +110,7 @@ class Tiles:
 
 def main() -> None:
     config = Config(
-        updates_per_second=50,
+        updates_per_second=200,
         number_count=130
     )
     nums_to_sort = [random.randint(config.number_min, config.number_max) for _ in range(config.number_count)]
