@@ -1,9 +1,9 @@
 from collections.abc import Iterator
 from typing import Protocol
 
-from sortviz.algorithm.event import Event
+from .events import Event
 
 
 class SortingAlgorithm(Protocol):
-    def __call__(self, nums_to_sort: list[int]) -> Iterator[Event]:
+    def __call__(self, nums: list[int]) -> Iterator[Event]:
         ...
